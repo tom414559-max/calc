@@ -147,9 +147,9 @@
         <button class="currency-btn" id="btn-krw" onclick="switchCurrency('krw')">🇰🇷 韓國 (KRW)</button>
     </div>
     
-    <!-- ✦ 新增：台灣銀行公布之固定參考值區塊 ✦ -->
-    <div class="bot-hint-box" id="bankRefBox">
-        🏛️ 台灣銀行本日公布參考匯率：<strong id="bankRefRate">0.2135</strong>
+    <!-- 台灣銀行公布之固定參考值區塊 -->
+    <div class="bot-hint-box">
+        🏛️ 台灣銀行本日公布參考匯率：<strong id="bankRefRate">0.2002</strong>
     </div>
     
     <div class="form-group">
@@ -177,8 +177,8 @@
     </div>
 
     <div class="form-group">
-        <label for="profitType">利潤設定方式</label>
-        <select id="profitType" style="padding:10px; border-radius:6px; border:1px solid #cbd5e0; font-size:16px; margin-bottom:12px;" onchange="toggleProfitInput()">
+        <label>利潤設定方式</label>
+        <select id="profitSelect" style="padding:10px; border-radius:6px; border:1px solid #cbd5e0; font-size:16px; margin-bottom:12px;" onchange="toggleProfitInput()">
             <option value="percent">按商品常規成數 (加 %)</option>
             <option value="fixed">固定收取代購費 (元)</option>
         </select>
@@ -216,15 +216,14 @@
 <script>
     // ✦ 這裡設定您的「當前計算預設整數值」 ✦
     const defaultRates = {
-        jpy: 0.2000, // 一打開預設日幣整數值
-        krw: 0.0240  // 一打開預設韓元整數值
+        jpy: 0.2000, 
+        krw: 0.0240  
     };
 
-    // ✦ 這裡設定要給您參考看的「台銀公布匯率」固定數值 ✦
-    // 未來台銀大幅波動時，您可以隨時來這邊手動修改這兩個參考數字
+    // ✦ 這裡同步為當前最新台灣銀行公布匯率（日圓 0.2002 / 韓元 0.0228） ✦
     const bankRefRates = {
-        jpy: 0.2135, // 顯示在最上方的台銀日幣參考值
-        krw: 0.0248  // 顯示在最上方的台銀韓元參考值
+        jpy: 0.2002, 
+        krw: 0.0228  
     };
     
     let currentCurrency = 'jpy';
@@ -250,7 +249,7 @@
     }
 
     function toggleProfitInput() {
-        const type = document.getElementById('profitType').value;
+        const type = document.getElementById('profitSelect').value;
         if (type === 'percent') {
             document.getElementById('profitPercentGroup').style.display = 'flex';
             document.getElementById('profitFixedGroup').style.display = 'none';
@@ -265,7 +264,7 @@
         const foreignPrice = parseFloat(document.getElementById('foreignPrice').value) || 0;
         const exchangeRate = parseFloat(document.getElementById('exchangeRate').value) || 0;
         const cardFeePercent = parseFloat(document.getElementById('cardFee').value) || 0;
-        const profitType = document.getElementById('profitType').value;
+        const profitType = document.getElementById('profitSelect').value;
         const shippingFee = parseFloat(document.getElementById('shippingFee').value) || 0;
 
         if (foreignPrice === 0) {
@@ -286,4 +285,7 @@
         } else {
             profitTwd = parseFloat(document.getElementById('profitFixed').value) || 0;
         }
+
+        const total = costTwd + feeTwd + profitTwd + shippingFee;
+        const finalQuote = Math.ceil(total);
 
