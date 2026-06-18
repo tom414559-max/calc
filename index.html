@@ -128,7 +128,7 @@
     }
 
     function toggleProfitInput() {
-        const type = document.getElementById('profitSelect').value;
+        let type = document.getElementById('profitSelect').value;
         if (type === 'percent') {
             document.getElementById('profitPercentGroup').style.display = 'flex';
             document.getElementById('profitFixedGroup').style.display = 'none';
@@ -140,11 +140,11 @@
     }
 
     function calculateQuote() {
-        const foreignPrice = parseFloat(document.getElementById('foreignPrice').value) || 0;
-        const exchangeRate = parseFloat(document.getElementById('exchangeRate').value) || 0;
-        const cardFeePercent = parseFloat(document.getElementById('cardFee').value) || 0;
-        const profitType = document.getElementById('profitSelect').value;
-        const shippingFee = parseFloat(document.getElementById('shippingFee').value) || 0;
+        let foreignPrice = parseFloat(document.getElementById('foreignPrice').value) || 0;
+        let exchangeRate = parseFloat(document.getElementById('exchangeRate').value) || 0;
+        let cardFeePercent = parseFloat(document.getElementById('cardFee').value) || 0;
+        let profitType = document.getElementById('profitSelect').value;
+        let shippingFee = parseFloat(document.getElementById('shippingFee').value) || 0;
 
         if (foreignPrice === 0) {
             document.getElementById('finalQuote').innerText = "NT$ 0";
@@ -154,19 +154,19 @@
             return;
         }
 
-        const costTwd = foreignPrice * exchangeRate;
-        const feeTwd = costTwd * (cardFeePercent / 100);
+        let costTwd = foreignPrice * exchangeRate;
+        let feeTwd = costTwd * (cardFeePercent / 100);
 
         let profitTwd = 0;
         if (profitType === 'percent') {
-            const profitPercent = parseFloat(document.getElementById('profitPercent').value) || 0;
+            let profitPercent = parseFloat(document.getElementById('profitPercent').value) || 0;
             profitTwd = costTwd * (profitPercent / 100);
         } else {
             profitTwd = parseFloat(document.getElementById('profitFixed').value) || 0;
         }
 
-        const total = costTwd + feeTwd + profitTwd + shippingFee;
-        const finalQuote = Math.ceil(total);
+        let total = costTwd + feeTwd + profitTwd + shippingFee;
+        let finalQuote = Math.ceil(total);
 
         document.getElementById('finalQuote').innerText = "NT$ " + finalQuote.toLocaleString();
         document.getElementById('costTwd').innerText = "NT$ " + Math.round(costTwd).toLocaleString();
