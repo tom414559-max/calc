@@ -35,7 +35,7 @@
             background-color: #edf2f7;
             padding: 4px;
             border-radius: 8px;
-            margin-bottom: 20px;
+            margin-bottom: 15px;
         }
         .currency-btn {
             flex: 1;
@@ -54,6 +54,20 @@
             color: #2b6cb0;
             box-shadow: 0 2px 5px rgba(0,0,0,0.05);
         }
+        .bot-hint-box {
+            background-color: #f7fafc;
+            border: 1px dashed #cbd5e0;
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 20px;
+            font-size: 13px;
+            color: #4a5568;
+            text-align: center;
+        }
+        .bot-hint-box strong {
+            color: #e53e3e;
+            font-size: 15px;
+        }
         .form-group {
             margin-bottom: 16px;
         }
@@ -69,7 +83,8 @@
             align-items: center;
         }
         input[type="number"], select {
-            flex: 1;
+            width: 100%;
+            box-sizing: border-box;
             padding: 10px;
             border: 1px solid #cbd5e0;
             border-radius: 6px;
@@ -85,6 +100,7 @@
             font-size: 14px;
             color: #718096;
             width: 45px;
+            flex-shrink: 0;
         }
         .result-box {
             background-color: #ebf8ff;
@@ -125,14 +141,19 @@
 <div class="container">
     <h2>🗺️ 日韓代購快速報價</h2>
     
-    <!-- 幣別切換按鈕 -->
+    <!-- 幣別切換 -->
     <div class="currency-toggle">
         <button class="currency-btn active" id="btn-jpy" onclick="switchCurrency('jpy')">🇯🇵 日本 (JPY)</button>
         <button class="currency-btn" id="btn-krw" onclick="switchCurrency('krw')">🇰🇷 韓國 (KRW)</button>
     </div>
     
+    <!-- 台灣銀行公布之固定參考值區塊 -->
+    <div class="bot-hint-box">
+        🏛️ 台灣銀行本日公布參考匯率：<strong id="bankRefRate">0.2002</strong>
+    </div>
+    
     <div class="form-group">
-        <label id="priceLabel" for="foreignPrice">商品外幣售價 (含稅)</label>
+        <label id="priceLabel" for="foreignPrice">商品日幣售價 (含稅)</label>
         <div class="input-group">
             <input type="number" id="foreignPrice" placeholder="請輸入金額" oninput="calculateQuote()">
             <span class="unit" id="currencyUnit">JPY</span>
@@ -140,9 +161,9 @@
     </div>
 
     <div class="form-group">
-        <label for="exchangeRate">當前匯率</label>
+        <label for="exchangeRate">當前計算匯率 (可隨時修改)</label>
         <div class="input-group">
-            <input type="number" id="exchangeRate" value="0.2150" step="0.0001" oninput="calculateQuote()">
+            <input type="number" id="exchangeRate" value="0.2000" step="0.0001" oninput="calculateQuote()">
             <span class="unit">台幣</span>
         </div>
     </div>
@@ -156,8 +177,8 @@
     </div>
 
     <div class="form-group">
-        <label for="profitType">利潤設定方式</label>
-        <select id="profitType" style="width:100%; padding:10px; border-radius:6px; border:1px solid #cbd5e0; font-size:16px; margin-bottom:12px;" onchange="toggleProfitInput()">
+        <label>利潤設定方式</label>
+        <select id="profitSelect" style="padding:10px; border-radius:6px; border:1px solid #cbd5e0; font-size:16px; margin-bottom:12px;" onchange="toggleProfitInput()">
             <option value="percent">按商品常規成數 (加 %)</option>
             <option value="fixed">固定收取代購費 (元)</option>
         </select>
@@ -193,10 +214,16 @@
 </div>
 
 <script>
-    // 預設匯率設定
-    const defaultRates = {
-        jpy: 0.2150, // 日本預設匯率
-        krw: 0.0245  // 韓國預設匯率 (可根據目前市場微調)
+    // ✦ 這裡設定您的「當前計算預設整數值」使用 let 確保可自由變更 ✦
+    let defaultRates = {
+        jpy: 0.2000, 
+        krw: 0.0240  
+    };
+
+    // ✦ 這裡設定要給您參考看的「台銀公布匯率」固定數值 ✦
+    let bankRefRates = {
+        jpy: 0.2002, 
+        krw: 0.0228  
     };
     
     let currentCurrency = 'jpy';
@@ -204,28 +231,33 @@
     function switchCurrency(type) {
         currentCurrency = type;
         
-        // 切換按鈕樣式
+        // 1. 先記錄使用者剛才可能在框框內自己修改過的匯率，避免切換時不見
+        const oldRate = parseFloat(document.getElementById('exchangeRate').value) || 0;
+        
+        // 2. 切換按鈕亮起樣式
         document.getElementById('btn-jpy').classList.remove('active');
         document.getElementById('btn-krw').classList.remove('active');
         document.getElementById('btn-' + type).classList.add('active');
         
-        // 更新文字標籤與預設匯率
+        // 3. 更新標籤文字、帶入對應的初始固定匯率與台銀參考值
         if (type === 'jpy') {
             document.getElementById('priceLabel').innerText = "商品日幣售價 (含稅)";
             document.getElementById('currencyUnit').innerText = "JPY";
             document.getElementById('exchangeRate').value = defaultRates.jpy;
+            document.getElementById('bankRefRate').innerText = bankRefRates.jpy;
         } else {
             document.getElementById('priceLabel').innerText = "商品韓元售價 (含稅)";
             document.getElementById('currencyUnit').innerText = "KRW";
             document.getElementById('exchangeRate').value = defaultRates.krw;
+            document.getElementById('bankRefRate').innerText = bankRefRates.krw;
         }
         
-        // 清空輸入或重新計算
+        // 4. 強制執行一次重新計算
         calculateQuote();
     }
 
     function toggleProfitInput() {
-        const type = document.getElementById('profitType').value;
+        const type = document.getElementById('profitSelect').value;
         if (type === 'percent') {
             document.getElementById('profitPercentGroup').style.display = 'flex';
             document.getElementById('profitFixedGroup').style.display = 'none';
@@ -240,7 +272,7 @@
         const foreignPrice = parseFloat(document.getElementById('foreignPrice').value) || 0;
         const exchangeRate = parseFloat(document.getElementById('exchangeRate').value) || 0;
         const cardFeePercent = parseFloat(document.getElementById('cardFee').value) || 0;
-        const profitType = document.getElementById('profitType').value;
+        const profitType = document.getElementById('profitSelect').value;
         const shippingFee = parseFloat(document.getElementById('shippingFee').value) || 0;
 
         if (foreignPrice === 0) {
@@ -251,32 +283,10 @@
             return;
         }
 
-        // 1. 計算基本台幣成本
         const costTwd = foreignPrice * exchangeRate;
-
-        // 2. 計算海外刷卡手續費
         const feeTwd = costTwd * (cardFeePercent / 100);
 
-        // 3. 計算代購利潤
         let profitTwd = 0;
         if (profitType === 'percent') {
             const profitPercent = parseFloat(document.getElementById('profitPercent').value) || 0;
             profitTwd = costTwd * (profitPercent / 100);
-        } else {
-            profitTwd = parseFloat(document.getElementById('profitFixed').value) || 0;
-        }
-
-        // 4. 總計報價
-        const total = costTwd + feeTwd + profitTwd + shippingFee;
-        const finalQuote = Math.ceil(total);
-
-        // 顯示結果
-        document.getElementById('finalQuote').innerText = "NT$ " + finalQuote.toLocaleString();
-        document.getElementById('costTwd').innerText = "NT$ " + Math.round(costTwd).toLocaleString();
-        document.getElementById('feeTwd').innerText = "NT$ " + Math.round(feeTwd).toLocaleString();
-        document.getElementById('profitTwd').innerText = "NT$ " + Math.round(profitTwd).toLocaleString();
-    }
-</script>
-
-</body>
-</html>
