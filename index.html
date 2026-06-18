@@ -36,9 +36,9 @@
         <button class="currency-btn" id="btn-krw" onclick="switchCurrency('krw')">🇰🇷 韓國 (KRW)</button>
     </div>
     
-    <!-- 台灣銀行公布之固定參考值區塊 -->
+    <!-- 台灣銀行公布之固定參考值區塊（現在會自動切換名字了） -->
     <div class="bot-hint-box">
-        🏛️ 台灣銀行本日公布參考匯率：<strong id="bankRefRate">0.2002</strong>
+        🏛️ 台灣銀行本日公布參考匯率(<span id="bankRefTitle">日圓</span>)：<strong id="bankRefRate">0.2002</strong>
     </div>
     
     <div class="form-group">
@@ -117,11 +117,13 @@
             document.getElementById('priceLabel').innerText = "商品日幣售價 (含稅)";
             document.getElementById('currencyUnit').innerText = "JPY";
             document.getElementById('exchangeRate').value = "0.2000";
+            document.getElementById('bankRefTitle').innerText = "日圓";
             document.getElementById('bankRefRate').innerText = "0.2002";
         } else {
             document.getElementById('priceLabel').innerText = "商品韓元售價 (含稅)";
             document.getElementById('currencyUnit').innerText = "KRW";
             document.getElementById('exchangeRate').value = "0.0240";
+            document.getElementById('bankRefTitle').innerText = "韓元";
             document.getElementById('bankRefRate').innerText = "0.0228";
         }
         calculateQuote();
