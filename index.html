@@ -69,7 +69,8 @@
             align-items: center;
         }
         input[type="number"], select {
-            flex: 1;
+            width: 100%;
+            box-sizing: border-box;
             padding: 10px;
             border: 1px solid #cbd5e0;
             border-radius: 6px;
@@ -85,6 +86,7 @@
             font-size: 14px;
             color: #718096;
             width: 45px;
+            flex-shrink: 0;
         }
         .result-box {
             background-color: #ebf8ff;
@@ -137,7 +139,7 @@
         <button class="currency-btn" id="btn-krw" onclick="switchCurrency('krw')">🇰🇷 韓國 (KRW)</button>
     </div>
     
-    <div class="api-status" id="apiStatus">正在同步最新網路即時匯率...</div>
+    <div class="api-status" id="apiStatus">正在載入基本計算設定...</div>
     
     <div class="form-group">
         <label id="priceLabel" for="foreignPrice">商品日幣售價 (含稅)</label>
@@ -148,9 +150,9 @@
     </div>
 
     <div class="form-group">
-        <label for="exchangeRate">當前匯率 (已加外加保護)</label>
+        <label for="exchangeRate">當前匯率</label>
         <div class="input-group">
-            <input type="number" id="exchangeRate" value="0.2150" step="0.0001" oninput="calculateQuote()">
+            <input type="number" id="exchangeRate" value="0.2000" step="0.0001" oninput="calculateQuote()">
             <span class="unit">台幣</span>
         </div>
     </div>
@@ -165,7 +167,7 @@
 
     <div class="form-group">
         <label for="profitType">利潤設定方式</label>
-        <select id="profitType" style="width:100%; padding:10px; border-radius:6px; border:1px solid #cbd5e0; font-size:16px; margin-bottom:12px;" onchange="toggleProfitInput()">
+        <select id="profitType" style="padding:10px; border-radius:6px; border:1px solid #cbd5e0; font-size:16px; margin-bottom:12px;" onchange="toggleProfitInput()">
             <option value="percent">按商品常規成數 (加 %)</option>
             <option value="fixed">固定收取代購費 (元)</option>
         </select>
@@ -201,23 +203,24 @@
 </div>
 
 <script>
-    // ✦ 這裡設定您的代購水外（外加匯差）防止虧損 ✦
+    // ✦ 這裡設定您的代購外加保護匯差 ✦
     const rateBuffer = {
-        jpy: 0.0050, // 自動抓到的日幣匯率 + 0.005 (例如 0.2110 變 0.2160)
-        krw: 0.0010  // 自動抓到的韓元匯率 + 0.001 (例如 0.0240 變 0.0251)
+        jpy: 0.0050, // 自動抓到的日幣 + 0.005
+        krw: 0.0010  // 自動抓到的韓元 + 0.001
     };
 
-    // 萬一網路連不上時的「備用保底匯率」
+    // 保底預設匯率 (一打開沒網路時立刻可以用這組算錢，日幣設為您要求的 0.2)
     let fetchedRates = {
-        jpy: 0.2150,
+        jpy: 0.2000,
         krw: 0.0245
     };
     
     let currentCurrency = 'jpy';
 
-    // 網頁一打開，自動去抓最新的銀行即時匯率
+    // 全自動背景同步最新網路即時匯率
     async function fetchLiveRates() {
         try {
+            document.getElementById('apiStatus').innerText = "🔄 正在同步最新網路即時匯率...";
             const response = await fetch('https://er-api.com');
             if (!response.ok) throw new Error();
             const data = await response.json();
@@ -227,10 +230,20 @@
             fetchedRates.krw = parseFloat(((1 / data.rates.KRW) + rateBuffer.krw).toFixed(4));
             
             document.getElementById('apiStatus').innerText = "🟢 已成功同步今天最新網路匯率 (已自動外加安全匯差)";
-            document.getElementById('exchangeRate').value = fetchedRates.jpy;
+            
+            // 根據當前切換的幣別更新畫面上的數字
+            if (currentCurrency === 'jpy') {
+                document.getElementById('exchangeRate').value = fetchedRates.jpy;
+            } else {
+                document.getElementById('exchangeRate').value = fetchedRates.krw;
+            }
         } catch (error) {
-            document.getElementById('apiStatus').innerText = "🔴 無法連線網路匯率，已自動切換為本機保底匯率";
-            document.getElementById('exchangeRate').value = fetchedRates.jpy;
+            document.getElementById('apiStatus').innerText = "⚠️ 無法連線網路匯率，已自動切換為本機固定匯率";
+            if (currentCurrency === 'jpy') {
+                document.getElementById('exchangeRate').value = fetchedRates.jpy;
+            } else {
+                document.getElementById('exchangeRate').value = fetchedRates.krw;
+            }
         }
         calculateQuote();
     }
@@ -271,16 +284,3 @@
         const cardFeePercent = parseFloat(document.getElementById('cardFee').value) || 0;
         const profitType = document.getElementById('profitType').value;
         const shippingFee = parseFloat(document.getElementById('shippingFee').value) || 0;
-
-        if (foreignPrice === 0) {
-            document.getElementById('finalQuote').innerText = "NT$ 0";
-            document.getElementById('costTwd').innerText = "NT$ 0";
-            document.getElementById('feeTwd').innerText = "NT$ 0";
-            document.getElementById('profitTwd').innerText = "NT$ 0";
-            return;
-        }
-
-        const costTwd = foreignPrice * exchangeRate;
-        const feeTwd = costTwd * (cardFeePercent / 100);
-
-        let profitTwd = 0;
