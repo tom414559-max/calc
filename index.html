@@ -214,14 +214,14 @@
 </div>
 
 <script>
-    // ✦ 這裡設定您的「當前計算預設整數值」 ✦
-    const defaultRates = {
+    // ✦ 這裡設定您的「當前計算預設整數值」使用 let 確保可自由變更 ✦
+    let defaultRates = {
         jpy: 0.2000, 
         krw: 0.0240  
     };
 
-    // ✦ 這裡同步為當前最新台灣銀行公布匯率（日圓 0.2002 / 韓元 0.0228） ✦
-    const bankRefRates = {
+    // ✦ 這裡設定要給您參考看的「台銀公布匯率」固定數值 ✦
+    let bankRefRates = {
         jpy: 0.2002, 
         krw: 0.0228  
     };
@@ -230,10 +230,16 @@
 
     function switchCurrency(type) {
         currentCurrency = type;
+        
+        // 1. 先記錄使用者剛才可能在框框內自己修改過的匯率，避免切換時不見
+        const oldRate = parseFloat(document.getElementById('exchangeRate').value) || 0;
+        
+        // 2. 切換按鈕亮起樣式
         document.getElementById('btn-jpy').classList.remove('active');
         document.getElementById('btn-krw').classList.remove('active');
         document.getElementById('btn-' + type).classList.add('active');
         
+        // 3. 更新標籤文字、帶入對應的初始固定匯率與台銀參考值
         if (type === 'jpy') {
             document.getElementById('priceLabel').innerText = "商品日幣售價 (含稅)";
             document.getElementById('currencyUnit').innerText = "JPY";
@@ -245,6 +251,8 @@
             document.getElementById('exchangeRate').value = defaultRates.krw;
             document.getElementById('bankRefRate').innerText = bankRefRates.krw;
         }
+        
+        // 4. 強制執行一次重新計算
         calculateQuote();
     }
 
@@ -282,10 +290,3 @@
         if (profitType === 'percent') {
             const profitPercent = parseFloat(document.getElementById('profitPercent').value) || 0;
             profitTwd = costTwd * (profitPercent / 100);
-        } else {
-            profitTwd = parseFloat(document.getElementById('profitFixed').value) || 0;
-        }
-
-        const total = costTwd + feeTwd + profitTwd + shippingFee;
-        const finalQuote = Math.ceil(total);
-
