@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>日韓代購快速報價計算機</title>
+    <title>日韓代購全自動報價計算機</title>
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -118,6 +118,13 @@
             justify-content: space-between;
             margin-bottom: 4px;
         }
+        .api-status {
+            text-align: center;
+            font-size: 11px;
+            color: #a0aec0;
+            margin-top: -10px;
+            margin-bottom: 15px;
+        }
     </style>
 </head>
 <body>
@@ -125,14 +132,15 @@
 <div class="container">
     <h2>🗺️ 日韓代購快速報價</h2>
     
-    <!-- 幣別切換按鈕 -->
     <div class="currency-toggle">
         <button class="currency-btn active" id="btn-jpy" onclick="switchCurrency('jpy')">🇯🇵 日本 (JPY)</button>
         <button class="currency-btn" id="btn-krw" onclick="switchCurrency('krw')">🇰🇷 韓國 (KRW)</button>
     </div>
     
+    <div class="api-status" id="apiStatus">正在同步最新網路即時匯率...</div>
+    
     <div class="form-group">
-        <label id="priceLabel" for="foreignPrice">商品外幣售價 (含稅)</label>
+        <label id="priceLabel" for="foreignPrice">商品日幣售價 (含稅)</label>
         <div class="input-group">
             <input type="number" id="foreignPrice" placeholder="請輸入金額" oninput="calculateQuote()">
             <span class="unit" id="currencyUnit">JPY</span>
@@ -140,7 +148,7 @@
     </div>
 
     <div class="form-group">
-        <label for="exchangeRate">當前匯率</label>
+        <label for="exchangeRate">當前匯率 (已加外加保護)</label>
         <div class="input-group">
             <input type="number" id="exchangeRate" value="0.2150" step="0.0001" oninput="calculateQuote()">
             <span class="unit">台幣</span>
@@ -193,34 +201,55 @@
 </div>
 
 <script>
-    // 預設匯率設定
-    const defaultRates = {
-        jpy: 0.2150, // 日本預設匯率
-        krw: 0.0245  // 韓國預設匯率 (可根據目前市場微調)
+    // ✦ 這裡設定您的代購水外（外加匯差）防止虧損 ✦
+    const rateBuffer = {
+        jpy: 0.0050, // 自動抓到的日幣匯率 + 0.005 (例如 0.2110 變 0.2160)
+        krw: 0.0010  // 自動抓到的韓元匯率 + 0.001 (例如 0.0240 變 0.0251)
+    };
+
+    // 萬一網路連不上時的「備用保底匯率」
+    let fetchedRates = {
+        jpy: 0.2150,
+        krw: 0.0245
     };
     
     let currentCurrency = 'jpy';
 
+    // 網頁一打開，自動去抓最新的銀行即時匯率
+    async function fetchLiveRates() {
+        try {
+            const response = await fetch('https://er-api.com');
+            if (!response.ok) throw new Error();
+            const data = await response.json();
+            
+            // 轉換匯率公式並加上安全水外
+            fetchedRates.jpy = parseFloat(((1 / data.rates.JPY) + rateBuffer.jpy).toFixed(4));
+            fetchedRates.krw = parseFloat(((1 / data.rates.KRW) + rateBuffer.krw).toFixed(4));
+            
+            document.getElementById('apiStatus').innerText = "🟢 已成功同步今天最新網路匯率 (已自動外加安全匯差)";
+            document.getElementById('exchangeRate').value = fetchedRates.jpy;
+        } catch (error) {
+            document.getElementById('apiStatus').innerText = "🔴 無法連線網路匯率，已自動切換為本機保底匯率";
+            document.getElementById('exchangeRate').value = fetchedRates.jpy;
+        }
+        calculateQuote();
+    }
+
     function switchCurrency(type) {
         currentCurrency = type;
-        
-        // 切換按鈕樣式
         document.getElementById('btn-jpy').classList.remove('active');
         document.getElementById('btn-krw').classList.remove('active');
         document.getElementById('btn-' + type).classList.add('active');
         
-        // 更新文字標籤與預設匯率
         if (type === 'jpy') {
             document.getElementById('priceLabel').innerText = "商品日幣售價 (含稅)";
             document.getElementById('currencyUnit').innerText = "JPY";
-            document.getElementById('exchangeRate').value = defaultRates.jpy;
+            document.getElementById('exchangeRate').value = fetchedRates.jpy;
         } else {
             document.getElementById('priceLabel').innerText = "商品韓元售價 (含稅)";
             document.getElementById('currencyUnit').innerText = "KRW";
-            document.getElementById('exchangeRate').value = defaultRates.krw;
+            document.getElementById('exchangeRate').value = fetchedRates.krw;
         }
-        
-        // 清空輸入或重新計算
         calculateQuote();
     }
 
@@ -251,32 +280,7 @@
             return;
         }
 
-        // 1. 計算基本台幣成本
         const costTwd = foreignPrice * exchangeRate;
-
-        // 2. 計算海外刷卡手續費
         const feeTwd = costTwd * (cardFeePercent / 100);
 
-        // 3. 計算代購利潤
         let profitTwd = 0;
-        if (profitType === 'percent') {
-            const profitPercent = parseFloat(document.getElementById('profitPercent').value) || 0;
-            profitTwd = costTwd * (profitPercent / 100);
-        } else {
-            profitTwd = parseFloat(document.getElementById('profitFixed').value) || 0;
-        }
-
-        // 4. 總計報價
-        const total = costTwd + feeTwd + profitTwd + shippingFee;
-        const finalQuote = Math.ceil(total);
-
-        // 顯示結果
-        document.getElementById('finalQuote').innerText = "NT$ " + finalQuote.toLocaleString();
-        document.getElementById('costTwd').innerText = "NT$ " + Math.round(costTwd).toLocaleString();
-        document.getElementById('feeTwd').innerText = "NT$ " + Math.round(feeTwd).toLocaleString();
-        document.getElementById('profitTwd').innerText = "NT$ " + Math.round(profitTwd).toLocaleString();
-    }
-</script>
-
-</body>
-</html>
