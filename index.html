@@ -30,7 +30,7 @@
 <div class="container">
     <h2>🗺️ 日韓美代購快速報價</h2>
     
-    <!-- 幣別切換 (新增美元) -->
+    <!-- 幣別切換 -->
     <div class="currency-toggle">
         <button class="currency-btn active" id="btn-jpy" onclick="switchCurrency('jpy')">🇯🇵 日本</button>
         <button class="currency-btn" id="btn-krw" onclick="switchCurrency('krw')">🇰🇷 韓國</button>
@@ -51,9 +51,9 @@
     </div>
 
     <div class="form-group">
-        <label for="exchangeRate">當前計算匯率 (外幣 ÷ 匯率 = 台幣)</label>
+        <label for="exchangeRate" id="rateFormulaLabel">當前計算匯率 (外幣 × 匯率 = 台幣)</label>
         <div class="input-group">
-            <input type="number" id="exchangeRate" value="5.0000" step="0.0001" oninput="calculateQuote()">
+            <input type="number" id="exchangeRate" value="0.2000" step="0.0001" oninput="calculateQuote()">
             <span class="unit">數值</span>
         </div>
     </div>
@@ -118,21 +118,24 @@
         if (type === 'jpy') {
             document.getElementById('priceLabel').innerText = "商品日幣售價 (含稅)";
             document.getElementById('currencyUnit').innerText = "JPY";
-            document.getElementById('exchangeRate').value = "5.0000";
+            document.getElementById('exchangeRate').value = "0.2000";
+            document.getElementById('rateFormulaLabel').innerText = "當前計算匯率 (外幣 × 匯率 = 台幣)";
             document.getElementById('bankRefTitle').innerText = "日圓";
             document.getElementById('bankRefRate').innerText = "0.2002";
         } else if (type === 'krw') {
             document.getElementById('priceLabel').innerText = "商品韓元售價 (含稅)";
             document.getElementById('currencyUnit').innerText = "KRW";
             document.getElementById('exchangeRate').value = "40.0000";
+            document.getElementById('rateFormulaLabel').innerText = "當前計算匯率 (外幣 ÷ 匯率 = 台幣)";
             document.getElementById('bankRefTitle').innerText = "韓元";
             document.getElementById('bankRefRate').innerText = "0.0228";
         } else {
             document.getElementById('priceLabel').innerText = "商品美元售價 (含稅)";
             document.getElementById('currencyUnit').innerText = "USD";
-            document.getElementById('exchangeRate').value = "0.0300";
+            document.getElementById('exchangeRate').value = "32.5000";
+            document.getElementById('rateFormulaLabel').innerText = "當前計算匯率 (外幣 × 匯率 = 台幣)";
             document.getElementById('bankRefTitle').innerText = "美金";
-            document.getElementById('bankRefRate').innerText = "32.50"; // 依當前市場大約提供參考
+            document.getElementById('bankRefRate').innerText = "32.50";
         }
         calculateQuote();
     }
@@ -164,8 +167,14 @@
             return;
         }
 
-        // 核心公式修改：從乘法改為除法 (外幣 ÷ 匯率 = 台幣成本)
-        let costTwd = foreignPrice / exchangeRate;
+        // 依據不同幣別執行對應公式
+        let costTwd = 0;
+        if (currentCurrency === 'krw') {
+            costTwd = foreignPrice / exchangeRate; // 韓元採除法
+        } else {
+            costTwd = foreignPrice * exchangeRate; // 日圓、美元採乘法
+        }
+
         let feeTwd = costTwd * (cardFeePercent / 100);
 
         let profitTwd = 0;
