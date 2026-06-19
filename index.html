@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>日韓代購快速報價計算機</title>
+    <title>日韓美代購快速報價計算機</title>
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; background-color: #f5f7fa; color: #333; margin: 0; padding: 20px; display: flex; justify-content: center; }
         .container { background-color: #fff; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); width: 100%; max-width: 450px; }
         h2 { text-align: center; margin-top: 0; color: #2c3e50; font-size: 22px; border-bottom: 2px solid #edf2f7; padding-bottom: 10px; }
-        .currency-toggle { display: flex; background-color: #edf2f7; padding: 4px; border-radius: 8px; margin-bottom: 15px; }
-        .currency-btn { flex: 1; border: none; background: none; padding: 10px; font-size: 15px; font-weight: bold; color: #4a5568; cursor: pointer; border-radius: 6px; }
+        .currency-toggle { display: flex; background-color: #edf2f7; padding: 4px; border-radius: 8px; margin-bottom: 15px; gap: 4px; }
+        .currency-btn { flex: 1; border: none; background: none; padding: 10px 4px; font-size: 14px; font-weight: bold; color: #4a5568; cursor: pointer; border-radius: 6px; white-space: nowrap; }
         .currency-btn.active { background-color: #fff; color: #2b6cb0; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
         .bot-hint-box { background-color: #f7fafc; border: 1px dashed #cbd5e0; border-radius: 8px; padding: 12px; margin-bottom: 20px; font-size: 13px; color: #4a5568; text-align: center; }
         .bot-hint-box strong { color: #e53e3e; font-size: 15px; }
@@ -28,15 +28,16 @@
 <body>
 
 <div class="container">
-    <h2>🗺️ 日韓代購快速報價</h2>
+    <h2>🗺️ 日韓美代購快速報價</h2>
     
-    <!-- 幣別切換 -->
+    <!-- 幣別切換 (新增美元) -->
     <div class="currency-toggle">
-        <button class="currency-btn active" id="btn-jpy" onclick="switchCurrency('jpy')">🇯🇵 日本 (JPY)</button>
-        <button class="currency-btn" id="btn-krw" onclick="switchCurrency('krw')">🇰🇷 韓國 (KRW)</button>
+        <button class="currency-btn active" id="btn-jpy" onclick="switchCurrency('jpy')">🇯🇵 日本</button>
+        <button class="currency-btn" id="btn-krw" onclick="switchCurrency('krw')">🇰🇷 韓國</button>
+        <button class="currency-btn" id="btn-usd" onclick="switchCurrency('usd')">🇺🇸 美國</button>
     </div>
     
-    <!-- 台灣銀行公布之固定參考值區塊（現在會自動切換名字了） -->
+    <!-- 台灣銀行公布之固定參考值區塊 -->
     <div class="bot-hint-box">
         🏛️ 台灣銀行本日公布參考匯率(<span id="bankRefTitle">日圓</span>)：<strong id="bankRefRate">0.2002</strong>
     </div>
@@ -50,10 +51,10 @@
     </div>
 
     <div class="form-group">
-        <label for="exchangeRate">當前計算匯率 (可隨時修改)</label>
+        <label for="exchangeRate">當前計算匯率 (外幣 ÷ 匯率 = 台幣)</label>
         <div class="input-group">
-            <input type="number" id="exchangeRate" value="0.2000" step="0.0001" oninput="calculateQuote()">
-            <span class="unit">台幣</span>
+            <input type="number" id="exchangeRate" value="5.0000" step="0.0001" oninput="calculateQuote()">
+            <span class="unit">數值</span>
         </div>
     </div>
 
@@ -111,20 +112,27 @@
         
         document.getElementById('btn-jpy').classList.remove('active');
         document.getElementById('btn-krw').classList.remove('active');
+        document.getElementById('btn-usd').classList.remove('active');
         document.getElementById('btn-' + type).classList.add('active');
         
         if (type === 'jpy') {
             document.getElementById('priceLabel').innerText = "商品日幣售價 (含稅)";
             document.getElementById('currencyUnit').innerText = "JPY";
-            document.getElementById('exchangeRate').value = "0.2000";
+            document.getElementById('exchangeRate').value = "5.0000";
             document.getElementById('bankRefTitle').innerText = "日圓";
             document.getElementById('bankRefRate').innerText = "0.2002";
-        } else {
+        } else if (type === 'krw') {
             document.getElementById('priceLabel').innerText = "商品韓元售價 (含稅)";
             document.getElementById('currencyUnit').innerText = "KRW";
-            document.getElementById('exchangeRate').value = "0.0240";
+            document.getElementById('exchangeRate').value = "40.0000";
             document.getElementById('bankRefTitle').innerText = "韓元";
             document.getElementById('bankRefRate').innerText = "0.0228";
+        } else {
+            document.getElementById('priceLabel').innerText = "商品美元售價 (含稅)";
+            document.getElementById('currencyUnit').innerText = "USD";
+            document.getElementById('exchangeRate').value = "0.0300";
+            document.getElementById('bankRefTitle').innerText = "美金";
+            document.getElementById('bankRefRate').innerText = "32.50"; // 依當前市場大約提供參考
         }
         calculateQuote();
     }
@@ -148,7 +156,7 @@
         let profitType = document.getElementById('profitSelect').value;
         let shippingFee = parseFloat(document.getElementById('shippingFee').value) || 0;
 
-        if (foreignPrice === 0) {
+        if (foreignPrice === 0 || exchangeRate === 0) {
             document.getElementById('finalQuote').innerText = "NT$ 0";
             document.getElementById('costTwd').innerText = "NT$ 0";
             document.getElementById('feeTwd').innerText = "NT$ 0";
@@ -156,7 +164,8 @@
             return;
         }
 
-        let costTwd = foreignPrice * exchangeRate;
+        // 核心公式修改：從乘法改為除法 (外幣 ÷ 匯率 = 台幣成本)
+        let costTwd = foreignPrice / exchangeRate;
         let feeTwd = costTwd * (cardFeePercent / 100);
 
         let profitTwd = 0;
